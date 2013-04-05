@@ -36,7 +36,7 @@ foreign import ccall unsafe "get_svdrec_rank" getRank :: Ptr SVDRec -> IO CLong
 
 foreign import ccall unsafe "get_dmat_rows" getRows :: Ptr DenseMatrix -> IO CLong
 foreign import ccall unsafe "get_dmat_cols" getCols :: Ptr DenseMatrix -> IO CLong
-foreign import ccall unsafe "get_dmat_value" getValue :: Ptr DenseMatrix -> IO (Ptr Double)
+foreign import ccall unsafe "get_dmat_buffer" getBuffer :: Ptr DenseMatrix -> IO (Ptr Double)
 
 -- Our approach to memory management for dmats isn't entirely future-proof as we currently
 -- free the library's data structures directly, keeping the underlying
@@ -66,7 +66,7 @@ dMatrixToMatrix :: DenseMatrix -> IO (P.Matrix Double)
 dMatrixToMatrix (DMat fptr) = withForeignPtr fptr $ \ptr->do
     rows <- fromIntegral <$> getRows ptr
     cols <- fromIntegral <$> getCols ptr
-    value <- getValue ptr >>= newForeignPtr_
+    value <- getBuffer ptr >>= newForeignPtr_
     return $ I.matrixFromVector I.RowMajor rows
            $ I.unsafeFromForeignPtr value 0 (rows*cols)
 

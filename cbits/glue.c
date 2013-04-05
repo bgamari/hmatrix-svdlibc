@@ -9,7 +9,7 @@ long get_svdrec_rank(SVDRec s) { return s->d; }
 
 long get_dmat_rows(DMat d) { return d->rows; }
 long get_dmat_cols(DMat d) { return d->cols; }
-double **get_dmat_value(DMat d) { return d->value; }
+double *get_dmat_buffer(DMat d) { return d->value[0]; }
 
 void free_dmat(DMat d) {
   free(d->value);
