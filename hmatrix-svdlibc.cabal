@@ -4,8 +4,9 @@
 name:                hmatrix-svdlibc
 version:             0.1.0.0
 synopsis:            SVDLIBC bindings for HMatrix
-description:         Bindings for the sparse singular value decomposition .
-                     provided by SVDLIBC.
+description:
+  Bindings for the sparse singular value decomposition
+  provided by SVDLIBC.
 homepage:            http://github.com/bgamari/hmatrix-svdlibc
 license:             BSD3
 license-file:        LICENSE
