@@ -67,7 +67,7 @@ dMatrixToMatrix (DMat fptr) = withForeignPtr fptr $ \ptr->do
     rows <- fromIntegral <$> getRows ptr
     cols <- fromIntegral <$> getCols ptr
     value <- getValue ptr >>= newForeignPtr_
-    return $ I.matrixFromVector I.RowMajor (rows*cols)
+    return $ I.matrixFromVector I.RowMajor rows
            $ I.unsafeFromForeignPtr value 0 (rows*cols)
 
 dMatrixToSMatrix :: DenseMatrix -> IO SparseMatrix
