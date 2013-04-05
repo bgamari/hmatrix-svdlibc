@@ -23,8 +23,8 @@ foreign import ccall unsafe "svdNewSMat" _newSMat :: CInt -> CInt -> IO (Ptr Spa
 foreign import ccall unsafe "&svdFreeSMat" p_freeSMat :: FunPtr (Ptr SparseMatrix -> IO ())
 foreign import ccall unsafe "svdTransposeS" _transposeSMat :: Ptr SparseMatrix -> IO (Ptr SparseMatrix)
 
-foreign import ccall unsafe "svdConvertDToS" _convertDToS :: Ptr DenseMatrix -> IO (Ptr SparseMatrix)
-foreign import ccall unsafe "svdConvertSToD" _convertSToD :: Ptr SparseMatrix -> IO (Ptr DenseMatrix)
+foreign import ccall unsafe "svdConvertDtoS" _convertDToS :: Ptr DenseMatrix -> IO (Ptr SparseMatrix)
+foreign import ccall unsafe "svdConvertStoD" _convertSToD :: Ptr SparseMatrix -> IO (Ptr DenseMatrix)
 
 newtype SVDRec = SVDRec (ForeignPtr SVDRec)
 foreign import ccall unsafe "svdLAS2A" _svdLAS2 :: Ptr SparseMatrix -> CLong -> IO (Ptr SVDRec)
