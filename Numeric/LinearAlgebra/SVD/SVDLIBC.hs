@@ -66,7 +66,7 @@ dMatrixToMatrix :: DenseMatrix -> IO (P.Matrix Double)
 dMatrixToMatrix (DMat fptr) = withForeignPtr fptr $ \ptr->do
     rows <- fromIntegral <$> getRows ptr
     cols <- fromIntegral <$> getCols ptr
-    value <- getValue ptr >>= newForeignPtr finalizerFree
+    value <- getValue ptr >>= newForeignPtr_
     return $ I.matrixFromVector I.RowMajor (rows*cols)
            $ I.unsafeFromForeignPtr value 0 (rows*cols)
 
