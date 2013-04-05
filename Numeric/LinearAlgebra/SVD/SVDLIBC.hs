@@ -93,6 +93,7 @@ unpackSvdRec (SVDRec fptr) = withForeignPtr fptr $ \ptr->do
     return (ut, s, vt)
 
 -- | @svd rank a@ is the sparse SVD of matrix @a@ with the given rank
+-- This function handles the conversion to svdlibc's sparse representation.
 svd :: Int -> P.Matrix Double -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
 svd rank m = unsafePerformIO $ do
     matrixToDMatrix m >>= dMatrixToSMatrix >>= runSvd rank >>= unpackSvdRec
