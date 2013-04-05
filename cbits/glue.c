@@ -15,3 +15,5 @@ void free_dmat(DMat d) {
   free(d->value);
   free(d);
 }
+
+void set_verbosity(long v) { SVDVerbosity = v; }

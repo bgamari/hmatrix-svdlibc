@@ -10,3 +10,5 @@ long get_dmat_cols(DMat d);
 double *get_dmat_buffer(DMat d);
 
 void free_dmat(DMat d);
+
+void set_verbosity(long v);

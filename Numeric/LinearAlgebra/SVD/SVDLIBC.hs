@@ -38,6 +38,8 @@ foreign import ccall unsafe "get_dmat_rows" getRows :: Ptr DenseMatrix -> IO CLo
 foreign import ccall unsafe "get_dmat_cols" getCols :: Ptr DenseMatrix -> IO CLong
 foreign import ccall unsafe "get_dmat_buffer" getBuffer :: Ptr DenseMatrix -> IO (Ptr Double)
 
+foreign import ccall unsafe "set_verbosity" setVerbosity :: CLong -> IO ()
+
 -- Our approach to memory management for dmats isn't entirely future-proof as we currently
 -- free the library's data structures directly, keeping the underlying
 -- buffers around for our own purposes
@@ -96,4 +98,4 @@ unpackSvdRec (SVDRec fptr) = withForeignPtr fptr $ \ptr->do
 -- This function handles the conversion to svdlibc's sparse representation.
 svd :: Int -> P.Matrix Double -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
 svd rank m = unsafePerformIO $ do
-    matrixToDMatrix m >>= dMatrixToSMatrix >>= runSvd rank >>= unpackSvdRec
+    setVerbosity 0 >> matrixToDMatrix m >>= dMatrixToSMatrix >>= runSvd rank >>= unpackSvdRec
