@@ -1,0 +1,3 @@
+[submodule "svdlibc"]
+	path = svdlibc
+	url = git://github.com/lucasmaystre/svdlibc.git
