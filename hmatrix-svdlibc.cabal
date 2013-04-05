@@ -14,6 +14,7 @@ maintainer:          bgamari.foss@gmail.com
 category:            Math
 build-type:          Simple
 cabal-version:       >=1.8
+extra-source-files:  cbits, include
 
 library
   exposed-modules:     Numeric.LinearAlgebra.SVD.SVDLIBC
