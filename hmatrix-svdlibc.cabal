@@ -1,5 +1,5 @@
 name:                hmatrix-svdlibc
-version:             0.3.0
+version:             0.3.1
 synopsis:            SVDLIBC bindings for HMatrix
 description:
   Bindings for the sparse singular value decomposition
@@ -9,7 +9,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Ben Gamari
 maintainer:          bgamari.foss@gmail.com
--- copyright:
+copyright:           (c) 2014 Ben Gamari
 category:            Math
 build-type:          Simple
 cabal-version:       >=1.8
@@ -17,7 +17,7 @@ extra-source-files:  cbits/*.c, include/*.h, svdlibc/*.c, svdlibc/*.h, svdlibc/R
 
 source-repository head
   type:                git
-  location:            git://github.com/bgamari/gmatrix-svdlibc.git
+  location:            git://github.com/bgamari/hmatrix-svdlibc.git
 
 library
   exposed-modules:     Numeric.LinearAlgebra.SVD.SVDLIBC
