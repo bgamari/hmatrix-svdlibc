@@ -4,8 +4,8 @@ module Numeric.LinearAlgebra.SVD.SVDLIBC
     (svd) where
 
 import Control.Applicative
-import qualified Data.Packed as P
-import qualified Data.Packed.Development as I
+import qualified Numeric.LinearAlgebra.Data as P
+import qualified Numeric.LinearAlgebra.Devel as I
 import Foreign hiding (unsafePerformIO)
 import Foreign.C.Types
 import System.IO.Unsafe
@@ -98,4 +98,11 @@ unpackSvdRec (SVDRec fptr) = withForeignPtr fptr $ \ptr->do
 -- This function handles the conversion to svdlibc's sparse representation.
 svd :: Int -> P.Matrix Double -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
 svd rank m = unsafePerformIO $ do
+    setVerbosity 0 >> matrixToDMatrix m >>= dMatrixToSMatrix >>= runSvd rank >>= unpackSvdRec
+
+-- | @svd rank a@ is the sparse SVD of matrix @a@ with the given rank
+-- This function handles the conversion to svdlibc's sparse representation,
+-- but does not require making the whole matrix dense first
+sparseSvd :: Int -> P.Matrix Double -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
+sparseSvd rank m = unsafePerformIO $ do
     setVerbosity 0 >> matrixToDMatrix m >>= dMatrixToSMatrix >>= runSvd rank >>= unpackSvdRec
