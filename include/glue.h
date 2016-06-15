@@ -11,4 +11,13 @@ double *get_dmat_buffer(DMat d);
 
 void free_dmat(DMat d);
 
+
+long get_smat_rows(SMat m);
+long get_smat_cols(SMat m);
+long *get_smat_pointr(SMat m);
+long *get_smat_rowind(SMat m);
+double *get_smat_value(SMat m);
+
+void free_smat(SMat m);
+
 void set_verbosity(long v);

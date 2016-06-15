@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Numeric.LinearAlgebra.SVD.SVDLIBC
-    (svd) where
+    (svd, sparsify, sparseSvd) where
 
 import Control.Applicative
 import qualified Numeric.LinearAlgebra.Data as P
@@ -37,6 +37,12 @@ foreign import ccall unsafe "get_svdrec_rank" getRank :: Ptr SVDRec -> IO CLong
 foreign import ccall unsafe "get_dmat_rows" getRows :: Ptr DenseMatrix -> IO CLong
 foreign import ccall unsafe "get_dmat_cols" getCols :: Ptr DenseMatrix -> IO CLong
 foreign import ccall unsafe "get_dmat_buffer" getBuffer :: Ptr DenseMatrix -> IO (Ptr Double)
+
+foreign import ccall unsafe "get_smat_rows" getSRows :: Ptr SparseMatrix -> IO CLong
+foreign import ccall unsafe "get_smat_cols" getSCols :: Ptr SparseMatrix -> IO CLong
+foreign import ccall unsafe "get_smat_pointr" getSPointr :: Ptr SparseMatrix -> IO (Ptr Int) --long?
+foreign import ccall unsafe "get_smat_rowind" getSRowind :: Ptr SparseMatrix -> IO (Ptr Int) --long?
+foreign import ccall unsafe "get_smat_buffer" getSBuffer :: Ptr SparseMatrix -> IO (Ptr Double)
 
 foreign import ccall unsafe "set_verbosity" setVerbosity :: CLong -> IO ()
 
@@ -100,9 +106,22 @@ svd :: Int -> P.Matrix Double -> (P.Matrix Double, P.Vector Double, P.Matrix Dou
 svd rank m = unsafePerformIO $ do
     setVerbosity 0 >> matrixToDMatrix m >>= dMatrixToSMatrix >>= runSvd rank >>= unpackSvdRec
 
+sparsify :: P.Matrix Double -> I.CSR
+sparsify mat = I.CSR {
+    I.csrVals = P.flatten mat,
+    I.csrCols = P.fromList $ mconcat $ replicate rows [1..fromIntegral cols],
+    I.csrRows = P.fromList $ CInt <$> [1, i32cols+1 .. i32rows*i32cols+1],
+    I.csrNRows = rows,
+    I.csrNCols = cols
+  } where
+    (rows, cols) = P.size mat
+    (i32rows, i32cols) = (fromIntegral rows, fromIntegral cols)
+
 -- | @svd rank a@ is the sparse SVD of matrix @a@ with the given rank
 -- This function handles the conversion to svdlibc's sparse representation,
 -- but does not require making the whole matrix dense first
-sparseSvd :: Int -> P.Matrix Double -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
+sparseSvd :: Int -> I.CSR -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
 sparseSvd rank m = unsafePerformIO $ do
-    setVerbosity 0 >> matrixToDMatrix m >>= dMatrixToSMatrix >>= runSvd rank >>= unpackSvdRec
+    setVerbosity 0
+    print m
+    createSMatrix (I.csrNRows m) (I.csrNCols m) >>= runSvd rank >>= unpackSvdRec
