@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <svdlib.h>
 #include <glue.h>
 
@@ -33,6 +34,18 @@ struct smat {
   long *rowind;  // For each nz entry, the row index.
   double *value; // For each nz entry, the value.
 }; */
+
+SMat svd_new_smat_from_csr(int rows, int cols, int vals, long *pointr, long *rowind, double *value) {
+  SMat S = (SMat) calloc(1, sizeof(struct smat));
+  if (!S) {perror("svdNewSMat"); return NULL;}
+  S->rows = rows;
+  S->cols = cols;
+  S->vals = vals;
+  S->pointr = pointr;
+  S->rowind = rowind;
+  S->value  = value;
+  return S;
+}
 
 long get_smat_rows(SMat m) { return m->rows; };
 long get_smat_cols(SMat m) { return m->cols; };

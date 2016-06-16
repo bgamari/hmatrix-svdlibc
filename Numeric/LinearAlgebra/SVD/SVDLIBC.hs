@@ -20,6 +20,8 @@ newtype SparseMatrix = SMat (ForeignPtr SparseMatrix)
                      deriving (Eq, Ord, Show)
 
 foreign import ccall unsafe "svdNewSMat" _newSMat :: CInt -> CInt -> IO (Ptr SparseMatrix)
+--svd_new_smat_from_csr(int rows, int cols, int vals, long *pointr, long *rowind, double *value)
+foreign import ccall unsafe "svd_new_smat_from_csr" _newSMatFromCSR :: CInt -> CInt -> CInt -> Ptr CInt -> Ptr CInt -> Ptr Double -> IO (Ptr SparseMatrix)
 foreign import ccall unsafe "&svdFreeSMat" p_freeSMat :: FunPtr (Ptr SparseMatrix -> IO ())
 foreign import ccall unsafe "svdTransposeS" _transposeSMat :: Ptr SparseMatrix -> IO (Ptr SparseMatrix)
 
@@ -40,8 +42,8 @@ foreign import ccall unsafe "get_dmat_buffer" getBuffer :: Ptr DenseMatrix -> IO
 
 foreign import ccall unsafe "get_smat_rows" getSRows :: Ptr SparseMatrix -> IO CLong
 foreign import ccall unsafe "get_smat_cols" getSCols :: Ptr SparseMatrix -> IO CLong
-foreign import ccall unsafe "get_smat_pointr" getSPointr :: Ptr SparseMatrix -> IO (Ptr Int) --long?
-foreign import ccall unsafe "get_smat_rowind" getSRowind :: Ptr SparseMatrix -> IO (Ptr Int) --long?
+foreign import ccall unsafe "get_smat_pointr" getSPointr :: Ptr SparseMatrix -> IO (Ptr CLong)
+foreign import ccall unsafe "get_smat_rowind" getSRowind :: Ptr SparseMatrix -> IO (Ptr CLong) --long?
 foreign import ccall unsafe "get_smat_buffer" getSBuffer :: Ptr SparseMatrix -> IO (Ptr Double)
 
 foreign import ccall unsafe "set_verbosity" setVerbosity :: CLong -> IO ()
@@ -54,6 +56,21 @@ asDMat ptr = DMat <$> newForeignPtr p_freeDMat ptr
 
 asSMat :: Ptr SparseMatrix -> IO SparseMatrix
 asSMat ptr = SMat <$> newForeignPtr p_freeSMat ptr
+
+wrapSMatrix :: I.CSR -> IO SparseMatrix
+wrapSMatrix csr = do
+  let tfst (x,_,_) = x
+  withForeignPtr (tfst $ I.unsafeToForeignPtr $ I.csrRows csr) $ \rowvec ->
+    withForeignPtr (tfst $ I.unsafeToForeignPtr $ I.csrCols csr) $ \colvec ->
+      withForeignPtr (tfst $ I.unsafeToForeignPtr $ I.csrVals csr) $ \valvec ->
+        _newSMatFromCSR
+          (fromIntegral $ I.csrNRows csr)
+          (fromIntegral $ I.csrNCols csr)
+          (fromIntegral $ P.size $ I.csrVals csr)
+          rowvec
+          colvec
+          valvec
+          >>= asSMat
 
 createSMatrix :: Int -> Int -> IO SparseMatrix
 createSMatrix rows cols = do
@@ -124,4 +141,4 @@ sparseSvd :: Int -> I.CSR -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
 sparseSvd rank m = unsafePerformIO $ do
     setVerbosity 0
     print m
-    createSMatrix (I.csrNRows m) (I.csrNCols m) >>= runSvd rank >>= unpackSvdRec
+    wrapSMatrix m >>= runSvd rank >>= unpackSvdRec
