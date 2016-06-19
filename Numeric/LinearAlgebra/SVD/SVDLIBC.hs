@@ -6,10 +6,13 @@ module Numeric.LinearAlgebra.SVD.SVDLIBC
 import Control.Applicative
 import qualified Numeric.LinearAlgebra.Data as P
 import qualified Numeric.LinearAlgebra.Devel as I
+import qualified Data.Vector.Storable as Vec
 import Foreign hiding (unsafePerformIO)
 import Foreign.C.Types
 import System.IO.Unsafe
 import Foreign.Marshal.Alloc
+import Debug.Trace
+import System.IO
 
 newtype DenseMatrix = DMat (ForeignPtr DenseMatrix)
                     deriving (Eq, Ord, Show)
@@ -20,8 +23,7 @@ newtype SparseMatrix = SMat (ForeignPtr SparseMatrix)
                      deriving (Eq, Ord, Show)
 
 foreign import ccall unsafe "svdNewSMat" _newSMat :: CInt -> CInt -> IO (Ptr SparseMatrix)
---svd_new_smat_from_csr(int rows, int cols, int vals, long *pointr, long *rowind, double *value)
-foreign import ccall unsafe "svd_new_smat_from_csr" _newSMatFromCSR :: CInt -> CInt -> CInt -> Ptr CInt -> Ptr CInt -> Ptr Double -> IO (Ptr SparseMatrix)
+foreign import ccall unsafe "svd_new_smat_from_csrT" _newSMatFromCSRT :: CInt -> CInt -> CInt -> Ptr CLong -> Ptr CLong -> Ptr Double -> IO (Ptr SparseMatrix)
 foreign import ccall unsafe "&svdFreeSMat" p_freeSMat :: FunPtr (Ptr SparseMatrix -> IO ())
 foreign import ccall unsafe "svdTransposeS" _transposeSMat :: Ptr SparseMatrix -> IO (Ptr SparseMatrix)
 
@@ -60,21 +62,17 @@ asSMat ptr = SMat <$> newForeignPtr p_freeSMat ptr
 wrapSMatrix :: I.CSR -> IO SparseMatrix
 wrapSMatrix csr = do
   let tfst (x,_,_) = x
-  withForeignPtr (tfst $ I.unsafeToForeignPtr $ I.csrRows csr) $ \rowvec ->
-    withForeignPtr (tfst $ I.unsafeToForeignPtr $ I.csrCols csr) $ \colvec ->
-      withForeignPtr (tfst $ I.unsafeToForeignPtr $ I.csrVals csr) $ \valvec ->
-        _newSMatFromCSR
+  Vec.unsafeWith (Vec.map fromIntegral $ I.csrRows csr) $ \rowvec ->
+    Vec.unsafeWith (Vec.map fromIntegral $ I.csrCols csr) $ \colvec ->
+      Vec.unsafeWith (I.csrVals csr) $ \valvec -> do
+        smatptr <- _newSMatFromCSRT
           (fromIntegral $ I.csrNRows csr)
           (fromIntegral $ I.csrNCols csr)
           (fromIntegral $ P.size $ I.csrVals csr)
           rowvec
           colvec
           valvec
-          >>= asSMat
-
-createSMatrix :: Int -> Int -> IO SparseMatrix
-createSMatrix rows cols = do
-    _newSMat (fromIntegral rows) (fromIntegral cols) >>= asSMat
+        asSMat smatptr
 
 transposeSMatrix :: SparseMatrix -> IO SparseMatrix
 transposeSMatrix (SMat fptr) = withForeignPtr fptr $ \ptr->
@@ -121,24 +119,37 @@ unpackSvdRec (SVDRec fptr) = withForeignPtr fptr $ \ptr->do
 -- This function handles the conversion to svdlibc's sparse representation.
 svd :: Int -> P.Matrix Double -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
 svd rank m = unsafePerformIO $ do
-    setVerbosity 0 >> matrixToDMatrix m >>= dMatrixToSMatrix >>= runSvd rank >>= unpackSvdRec
+    setVerbosity 0
+    >> matrixToDMatrix m
+    >>= dMatrixToSMatrix
+    >>= runSvd rank
+    >>= unpackSvdRec
 
 sparsify :: P.Matrix Double -> I.CSR
 sparsify mat = I.CSR {
     I.csrVals = P.flatten mat,
-    I.csrCols = P.fromList $ mconcat $ replicate rows [1..fromIntegral cols],
-    I.csrRows = P.fromList $ CInt <$> [1, i32cols+1 .. i32rows*i32cols+1],
+    -- The following are indexed from 1! This will be undone in sparseSvd(shiftCSR)
+    -- but it needs to match HMatrix's standard until then
+    I.csrCols = Vec.iterateN (rows*cols) (\x -> (x `mod` i32cols) + 1) 1,
+    I.csrRows = Vec.iterateN (rows+1) (+i32cols) 1,
     I.csrNRows = rows,
     I.csrNCols = cols
   } where
     (rows, cols) = P.size mat
     (i32rows, i32cols) = (fromIntegral rows, fromIntegral cols)
 
+shiftCSR :: I.CSR -> I.CSR
+shiftCSR csr = csr {
+    I.csrRows = Vec.map (subtract 1) $ I.csrRows csr,
+    I.csrCols = Vec.map (subtract 1) $ I.csrCols csr
+  }
+
 -- | @svd rank a@ is the sparse SVD of matrix @a@ with the given rank
 -- This function handles the conversion to svdlibc's sparse representation,
 -- but does not require making the whole matrix dense first
 sparseSvd :: Int -> I.CSR -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
-sparseSvd rank m = unsafePerformIO $ do
-    setVerbosity 0
-    print m
-    wrapSMatrix m >>= runSvd rank >>= unpackSvdRec
+sparseSvd rank m = unsafePerformIO $
+    setVerbosity 1
+    >>  (wrapSMatrix $ shiftCSR m)
+    >>= runSvd rank
+    >>= unpackSvdRec
