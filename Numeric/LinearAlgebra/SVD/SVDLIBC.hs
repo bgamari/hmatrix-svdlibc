@@ -22,7 +22,7 @@ newtype SparseMatrix = SMat (ForeignPtr SparseMatrix)
                      deriving (Eq, Ord, Show)
 
 foreign import ccall unsafe "svdNewSMat" _newSMat :: CInt -> CInt -> IO (Ptr SparseMatrix)
-foreign import ccall unsafe "svd_new_smat_from_csrT" _newSMatFromCSRT :: CInt -> CInt -> CInt -> Ptr CLong -> Ptr CLong -> Ptr Double -> IO (Ptr SparseMatrix)
+foreign import ccall unsafe "svd_new_smat_from_csr" _newSMatFromCSRT :: CInt -> CInt -> CInt -> Ptr CLong -> Ptr CLong -> Ptr Double -> IO (Ptr SparseMatrix)
 foreign import ccall unsafe "&svdFreeSMat" p_freeSMat :: FunPtr (Ptr SparseMatrix -> IO ())
 foreign import ccall unsafe "svdTransposeS" _transposeSMat :: Ptr SparseMatrix -> IO (Ptr SparseMatrix)
 

@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include <svdlib.h>
 #include <glue.h>
 
@@ -37,29 +36,15 @@ struct smat {
 
 /** Take a matrix in CSR format (which is what HMatrix gives) and turn it into
     CSC format, meanwhile making a copy so that GC is happy.*/
-SMat svd_new_smat_from_csrT(int rows, int cols, int vals, long *rowstart, long *colind, double *csr_value) {
-  /*fprintf(stderr, "rows %d cols %d vals %d\nvals ", rows, cols, vals);
-  for (int val=0; val < vals; val++) fprintf(stderr, " %0.3f", csr_value[val]);
-  fprintf(stderr, "\n");
-  for (int row=0; row < rows; row++) {
-    for (int i=rowstart[row]; i < rowstart[row+1]; i++) {
-      fprintf(stderr, "m[r=%d c=%ld, i=%d]: %.03f", row, colind[i], i, csr_value[i]);
-    }
-    fprintf(stderr, "\n");
-  }*/
-
-  struct smat S1;
-  // A CSR matrix is the same as a Transposed CSC
-  S1.rows = cols;
-  S1.cols = rows;
-  S1.vals = vals;
-  S1.pointr = rowstart;
-  S1.rowind = colind;
-  S1.value  = csr_value;
-  fprintf(stderr, "Transposing\n");
-  SMat S2 = svdTransposeS(&S1);
-  fprintf(stderr, "transposed\n");
-  return S2;
+SMat svd_new_smat_from_csr(int rows, int cols, int vals, long *rowstart, long *colind, double *csr_value) {
+  return svdTransposeS(& (struct smat){
+    .rows = cols,
+    .cols = rows,
+    .vals = vals,
+    .pointr = rowstart,
+    .rowind = colind,
+    .value  = csr_value
+  });
 }
 
 long get_smat_rows(SMat m) { return m->rows; };
