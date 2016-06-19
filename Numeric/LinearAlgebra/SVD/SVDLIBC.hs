@@ -11,7 +11,6 @@ import Foreign hiding (unsafePerformIO)
 import Foreign.C.Types
 import System.IO.Unsafe
 import Foreign.Marshal.Alloc
-import Debug.Trace
 import System.IO
 
 newtype DenseMatrix = DMat (ForeignPtr DenseMatrix)
@@ -149,7 +148,7 @@ shiftCSR csr = csr {
 -- but does not require making the whole matrix dense first
 sparseSvd :: Int -> I.CSR -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
 sparseSvd rank m = unsafePerformIO $
-    setVerbosity 1
+    setVerbosity 0
     >>  (wrapSMatrix $ shiftCSR m)
     >>= runSvd rank
     >>= unpackSvdRec
