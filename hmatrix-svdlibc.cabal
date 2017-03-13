@@ -1,5 +1,5 @@
 name:                hmatrix-svdlibc
-version:             0.4.0
+version:             0.4.1
 synopsis:            SVDLIBC bindings for HMatrix
 description:
   Bindings for the sparse singular value decomposition
