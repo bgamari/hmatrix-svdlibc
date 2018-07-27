@@ -1,7 +1,14 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Numeric.LinearAlgebra.SVD.SVDLIBC
-    (svd, sparsify, sparseSvd) where
+    ( -- * Singular value decomposition
+      svd, svd'
+      -- * Sparse SVD
+    , sparsify
+    , sparseSvd, sparseSvd'
+      -- * Parameters
+    , SVDParams(..), defaultSVDParams
+    ) where
 
 import Control.Applicative
 import qualified Numeric.LinearAlgebra.Data as P
@@ -30,7 +37,8 @@ foreign import ccall unsafe "svdConvertDtoS" _convertDToS :: Ptr DenseMatrix -> 
 foreign import ccall unsafe "svdConvertStoD" _convertSToD :: Ptr SparseMatrix -> IO (Ptr DenseMatrix)
 
 newtype SVDRec = SVDRec (ForeignPtr SVDRec)
-foreign import ccall unsafe "svdLAS2A" _svdLAS2 :: Ptr SparseMatrix -> CLong -> IO (Ptr SVDRec)
+foreign import ccall unsafe "svdLAS2" _svdLAS2 :: Ptr SparseMatrix -> CLong
+                                               -> CLong -> Ptr CDouble -> CDouble -> IO (Ptr SVDRec)
 
 foreign import ccall unsafe "get_svdrec_ut" getUt :: Ptr SVDRec -> IO (Ptr DenseMatrix)
 foreign import ccall unsafe "get_svdrec_s" getS :: Ptr SVDRec -> IO (Ptr Double)
@@ -100,9 +108,27 @@ sMatrixToDMatrix :: SparseMatrix -> IO DenseMatrix
 sMatrixToDMatrix (SMat fptr) = withForeignPtr fptr $ \ptr->
     _convertSToD ptr >>= asDMat
 
-runSvd :: Int -> SparseMatrix -> IO SVDRec
-runSvd rank (SMat fptr) = withForeignPtr fptr $ \ptr->do
-    res <- _svdLAS2 ptr (fromIntegral rank)
+data SVDParams = SVDParams { maxIters :: Maybe Int
+                             -- ^ Maximum iteration count
+                           , minEigenvalRange :: (Double, Double)
+                             -- ^ Eigenvalues in this range are considered uninteresting
+                           , kappa :: Double
+                           }
+
+-- | No iteration limit, exclude eigenvalues in range \((-10^{-30}, +10^{-30})@,
+-- kappa of @10^{-6}\).
+defaultSVDParams :: SVDParams
+defaultSVDParams = SVDParams { maxIters = Nothing
+                             , minEigenvalRange = (-1e-30, 1e-30)
+                             , kappa = 1e-6
+                             }
+
+runSvd :: SVDParams -> Int -> SparseMatrix -> IO SVDRec
+runSvd params rank (SMat fptr) = withForeignPtr fptr $ \ptr->do
+    let iterLimit = maybe 0 fromIntegral (maxIters params)
+        (a,b) = minEigenvalRange params
+    res <- withArray [realToFrac a, realToFrac b] $ \eigenvalRangePtr ->
+        _svdLAS2 ptr (fromIntegral rank) iterLimit eigenvalRangePtr (realToFrac $ kappa params)
     SVDRec <$> newForeignPtr finalizerFree res
 
 unpackSvdRec :: SVDRec -> IO (P.Matrix Double, P.Vector Double, P.Matrix Double)
@@ -117,11 +143,16 @@ unpackSvdRec (SVDRec fptr) = withForeignPtr fptr $ \ptr->do
 -- | @svd rank a@ is the sparse SVD of matrix @a@ with the given rank
 -- This function handles the conversion to svdlibc's sparse representation.
 svd :: Int -> P.Matrix Double -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
-svd rank m = unsafePerformIO $ do
+svd = svd' defaultSVDParams
+
+-- | Similar to 'svd' but allowing control over the 'SVDParams'.
+svd' :: SVDParams -> Int -> P.Matrix Double
+     -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
+svd' params rank m = unsafePerformIO $ do
     setVerbosity 0
     >> matrixToDMatrix m
     >>= dMatrixToSMatrix
-    >>= runSvd rank
+    >>= runSvd params rank
     >>= unpackSvdRec
 
 sparsify :: P.Matrix Double -> I.CSR
@@ -143,12 +174,18 @@ shiftCSR csr = csr {
     I.csrCols = Vec.map (subtract 1) $ I.csrCols csr
   }
 
--- | @svd rank a@ is the sparse SVD of matrix @a@ with the given rank
+-- | @sparseSvd rank a@ is the sparse SVD of matrix @a@ with the given rank
 -- This function handles the conversion to svdlibc's sparse representation,
 -- but does not require making the whole matrix dense first
 sparseSvd :: Int -> I.CSR -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
-sparseSvd rank m = unsafePerformIO $
+sparseSvd = sparseSvd' defaultSVDParams
+
+-- | Like 'sparseSvd' but providing greater control over the 'SVDParams' used
+-- for the computation.
+sparseSvd' :: SVDParams -> Int -> I.CSR
+           -> (P.Matrix Double, P.Vector Double, P.Matrix Double)
+sparseSvd' params rank m = unsafePerformIO $
     setVerbosity 0
     >>  (wrapSMatrix $ shiftCSR m)
-    >>= runSvd rank
+    >>= runSvd params rank
     >>= unpackSvdRec
