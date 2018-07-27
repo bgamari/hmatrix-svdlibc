@@ -14,7 +14,7 @@ category:            Math
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  cbits/*.c, include/*.h, svdlibc/*.c, svdlibc/*.h, svdlibc/README.md
-tested-with:         GHC ==7.10.3, GHC ==8.0.1
+tested-with:         GHC ==8.0.2, GHC ==8.2.2, GHC ==8.4.3, GHC ==8.6.1
 
 source-repository head
   type:                git
